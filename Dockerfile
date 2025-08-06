@@ -1,23 +1,23 @@
 # Use official Node.js image
 FROM node:20
 
-# Install yt-dlp
-RUN apt-get update && apt-get install -y yt-dlp
+# Install yt-dlp and ffmpeg (needed for some postprocessing)
+RUN apt-get update && apt-get install -y yt-dlp ffmpeg
 
 # Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json first for caching
+# Copy package files
 COPY package*.json ./
 
-# Install Node.js dependencies
+# Install dependencies
 RUN npm install
 
-# Copy the rest of the app
+# Copy remaining files
 COPY . .
 
 # Expose port
-EXPOSE 5000
+EXPOSE 10000
 
-# Start the app
+# Start app (Render injects PORT env var)
 CMD ["npm", "start"]
