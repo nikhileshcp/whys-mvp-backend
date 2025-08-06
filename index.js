@@ -9,6 +9,11 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -25,7 +30,8 @@ app.post("/analyze", async (req, res) => {
 
     // 1️⃣ Download audio using yt-dlp.exe
     await new Promise((resolve, reject) => {
-      const ytdlp = spawn("./yt-dlp.exe", [
+      // const ytdlp = spawn("./yt-dlp.exe", [
+        const ytdlp = spawn("yt-dlp", [
         "-f", "bestaudio[ext=webm]", // best quality audio in webm format
         "--merge-output-format", "webm", // ensure final file is .webm
         "-o", audioPath,
@@ -99,8 +105,4 @@ app.post("/analyze", async (req, res) => {
     console.error(err);
     res.status(500).json({ error: "Something went wrong" });
   }
-});
-
-app.listen(5000, () => {
-  console.log("✅ Server running on port 5000");
 });
