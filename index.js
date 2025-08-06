@@ -32,6 +32,7 @@ app.post("/analyze", async (req, res) => {
     await new Promise((resolve, reject) => {
       // const ytdlp = spawn("./yt-dlp.exe", [
         const ytdlp = spawn("yt-dlp", [
+        "--cookies", "cookies.txt",
         "-f", "bestaudio[ext=webm]", // best quality audio in webm format
         "--merge-output-format", "webm", // ensure final file is .webm
         "-o", audioPath,
