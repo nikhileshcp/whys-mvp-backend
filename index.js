@@ -20,21 +20,23 @@ const openai = new OpenAI({
 
 app.post("/analyze", async (req, res) => {
   try {
+    console.log("🚀 Received POST /analyze");
+
     const { youtubeUrl } = req.body;
     if (!youtubeUrl) {
+      console.warn("⚠️ Missing YouTube URL in request body");
       return res.status(400).json({ error: "YouTube URL is required" });
     }
 
-    // Always use .webm for stable Whisper support without ffmpeg
     const audioPath = path.join(process.cwd(), "audio.webm");
+    console.log("📥 Audio path set to:", audioPath);
 
-    // 1️⃣ Download audio using yt-dlp.exe
+    console.log("📡 Starting yt-dlp download...");
     await new Promise((resolve, reject) => {
-      // const ytdlp = spawn("./yt-dlp.exe", [
-        const ytdlp = spawn("yt-dlp", [
+      const ytdlp = spawn("yt-dlp", [
         "--cookies", "cookies.txt",
-        "-f", "bestaudio[ext=webm]", // best quality audio in webm format
-        "--merge-output-format", "webm", // ensure final file is .webm
+        "-f", "bestaudio[ext=webm]",
+        "--merge-output-format", "webm",
         "-o", audioPath,
         youtubeUrl
       ]);
@@ -48,30 +50,32 @@ app.post("/analyze", async (req, res) => {
       });
 
       ytdlp.on("close", (code) => {
-        if (code === 0) resolve();
-        else reject(`yt-dlp exited with code ${code}`);
+        if (code === 0) {
+          console.log("✅ yt-dlp finished successfully");
+          resolve();
+        } else {
+          console.error(`❌ yt-dlp exited with code ${code}`);
+          reject(`yt-dlp exited with code ${code}`);
+        }
       });
     });
 
-    // 2️⃣ Transcribe audio (Whisper supports .webm)
-    // const transcription = await openai.audio.transcriptions.create({
-    //   file: fs.createReadStream(audioPath),
-    //   model: "whisper-1",
-    // });
+    console.log("🔊 Starting transcription...");
     const transcription = await openai.audio.translations.create({
-        file: fs.createReadStream(audioPath),
-        model: "whisper-1",
-        });
+      file: fs.createReadStream(audioPath),
+      model: "whisper-1",
+    });
     const text = transcription.text;
+    console.log("📝 Transcription complete");
 
-    // 3️⃣ Analyze emotions
+    console.log("🧠 Starting emotion analysis...");
     const emotionAnalysis = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.7,
-        messages: [
-            {
-            role: "system",
-            content: `
+      messages: [
+        {
+          role: "system",
+          content: `
         You are an expert conversation analyst trained in psychotherapy and emotional intelligence.
 
         Your job: Analyze the provided transcript and produce insights in this **specific structured format**:
@@ -92,6 +96,7 @@ app.post("/analyze", async (req, res) => {
         { role: "user", content: text },
       ],
     });
+    console.log("📊 Emotion analysis complete");
 
     // 4️⃣ Send result back to client
     res.json({
@@ -99,11 +104,14 @@ app.post("/analyze", async (req, res) => {
       emotions: emotionAnalysis.choices[0].message.content,
     });
 
-    // 5️⃣ Clean up temporary audio file
+    console.log("📤 Response sent to client");
+
+    // 5️⃣ Clean up
     fs.unlinkSync(audioPath);
+    console.log("🧹 Temporary audio file deleted");
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Something went wrong" });
+    console.error("❌ An error occurred:", err);
+    res.status(500).json({ error: "Something went wrong", details: err.message || err });
   }
 });
